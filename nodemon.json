@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "./.env.dev"],
+  "ext": "ts,json",
+  "ignore": [],
+  "exec": "pnpm start"
+}
