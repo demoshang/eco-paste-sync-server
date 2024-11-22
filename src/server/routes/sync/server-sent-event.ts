@@ -5,6 +5,7 @@ import { omit } from 'radash';
 interface ClipboardPayload {
   type: 'text' | 'rtf' | 'html' | 'image' | 'files';
   value: string;
+  search: string;
   // 当 type = files | image 时, 存在该值
   blobs?: Blob[];
   // 当blobs存在时，计算大小
@@ -114,11 +115,7 @@ class ServerSentEvent {
     });
   }
 
-  private setRoomData(
-    roomId: string,
-    data: ClipboardPayload,
-
-  ) {
+  private setRoomData(roomId: string, data: ClipboardPayload) {
     this.roomMap[roomId] = this.roomMap[roomId] || { roomId, clients: [] };
 
     // 计算文件大小，单位M
@@ -129,7 +126,9 @@ class ServerSentEvent {
         return sum;
       }, 0);
     }
-    size = Number((Math.floor(size / 1024 / 1024 * 10000) / 10000).toFixed(4));
+    size = Number(
+      (Math.floor((size / 1024 / 1024) * 10000) / 10000).toFixed(4),
+    );
 
     this.roomMap[roomId].data = {
       ...data,
