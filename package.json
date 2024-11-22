@@ -23,6 +23,7 @@
   "scripts": {
     "build": "pnpm run clean && pnpm run build:bundle",
     "build:bundle": "tsup src/index.ts --treeshake --sourcemap --shims --format esm,cjs --dts",
+    "sea": "pnpm run clean && tsup src/index.ts --treeshake --sourcemap --shims --format cjs --config sea-tsup.config.ts && node --experimental-sea-config sea-config.json && node -e \"require('fs').copyFileSync(process.execPath, 'dist/epss.exe')\" && npx postject dist/epss.exe NODE_SEA_BLOB dist/sea-prep.blob  --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2",
     "clean": "rimraf dist",
     "dev": "nodemon --signal SIGHUP",
     "lint": "eslint ./src",
