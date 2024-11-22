@@ -1,12 +1,34 @@
 # eco-paste-sync-server
 
+配合 [demoshang/EcoPaste](https://github.com/demoshang/EcoPaste) 实现剪切板同步
+
+## 部署
+
+### docker-compose.yml
+
+```yml
+services:
+  api:
+    restart: unless-stopped
+    image: demoshang/eco-paste-sync-server:latest
+    environment:
+      - NODE_ENV=prod
+      - PORT=80
+    ports:
+      - 改成你想要的端口:80
+```
+
+### nodejs
+
+```bash
+pnpm build
+node dist/index.cjs
+```
+
 ## 开发
 
 ```bash
-# 1. 复制 .env.example 到 .env.dev 并完善里面内容
-# 2. 安装依赖
-pnpm install
-# 3. 启动
+pnpm i
 pnpm start
 ```
 
@@ -31,18 +53,18 @@ curl --request GET \
 
 ```json
 {
-	"type": "text",
-	"value": "文本"
+ "type": "text",
+ "value": "文本"
 }
 
 {
-	"type": "image",
-	"value": "图片.png"
+ "type": "image",
+ "value": "图片.png"
 }
 
 {
-	"type": "files",
-	"value": "[\"1.pdf\", \"图片.png\"]"
+ "type": "files",
+ "value": "[\"1.pdf\", \"图片.png\"]"
 }
 ```
 
@@ -60,6 +82,7 @@ curl --request GET \
 ### 上传内容到服务器
 
 - 上传文本
+
   ```bash
   curl --request POST \
     --url {{BASE_URL}}/api/sync \
@@ -69,7 +92,9 @@ curl --request GET \
     --form type=text \
     --form 'value=文本'
   ```
+
 - 上传图片
+
   ```bash
   curl --request POST \
   --url {{BASE_URL}}/api/sync \
@@ -80,7 +105,9 @@ curl --request GET \
   --form 'value=图片.png' \
   --form 'blobs=@/root/图片.png'
   ```
+
 - 上传文件
+
   ```bash
   curl --request POST \
   --url {{BASE_URL}}/api/sync \
@@ -94,7 +121,14 @@ curl --request GET \
   ```
 
 ### 变更通知
+
 ```js
 const source = new EventSource(`${BASE_URL}/api/sync/sse?clientId=${CLIENT_ID}&roomId=${ROOM_ID}`);
 // 返回内容和 【获取服务器最近一次记录】相同
 ```
+
+## 注意事项
+
+1. 自用, 不负任何责任
+1. 目前未实现加密, 请注意剪切板同步数据保密
+1. 接口未进行诸如账户密码/IP白名单/请求数等限制, 可能存在某些漏洞, 请谨慎使用
