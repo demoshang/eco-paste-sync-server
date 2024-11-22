@@ -32,18 +32,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
-    "axios": "^1.7.7",
     "dayjs": "^1.11.13",
-    "hono": "^4.6.10",
+    "hono": "^4.6.11",
     "radash": "^12.1.0",
     "ua-parser-js": "^2.0.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.9.1",
     "@swc-node/register": "^1.10.9",
-    "@swc/cli": "0.5.0",
+    "@swc/cli": "0.5.1",
     "@swc/core": "1.4.11",
-    "@types/node": "^22.9.0",
+    "@types/node": "^22.9.1",
     "cross-env": "^7.0.3",
     "eslint": "^9.14.0",
     "eslint-plugin-format": "^0.1.1",

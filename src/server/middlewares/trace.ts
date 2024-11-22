@@ -2,13 +2,13 @@ import type { Context, Next } from 'hono';
 
 import { createMiddleware } from 'hono/factory';
 import { randomUUID } from 'node:crypto';
+import { styleText } from 'node:util';
 
 import { ALS, TRACE_KEY } from '../../utils/logger';
 
 enum LogPrefix {
   Outgoing = '-->',
   Incoming = '<--',
-  Error = 'xxx',
 }
 
 async function trace(ctx: Context, next: Next) {
@@ -18,17 +18,27 @@ async function trace(ctx: Context, next: Next) {
 }
 
 function colorStatus(status: number) {
+  const str = `${status}`;
+
+  let format: Parameters<typeof styleText>['0'] = 'white';
   switch ((status / 100) | 0) {
-    case 5: // red = error
-      return `\x1B[31m${status}\x1B[0m`;
-    case 4: // yellow = warning
-      return `\x1B[33m${status}\x1B[0m`;
-    case 3: // cyan = redirect
-      return `\x1B[36m${status}\x1B[0m`;
-    case 2: // green = success
-      return `\x1B[32m${status}\x1B[0m`;
+    case 5: // error
+      format = 'red';
+      break;
+    case 4: // warning
+      format = 'yellow';
+      break;
+    case 3: // redirect
+      format = 'cyan';
+      break;
+    case 2: // success
+      format = 'green';
+      break;
+    default:
+      format = 'white';
   }
-  return `${status}`;
+
+  return styleText(format, str);
 }
 
 function logRequest(
@@ -50,11 +60,7 @@ function logRequest(
   logger.info(...logs);
 }
 
-function logResponse(
-  ms: number,
-  status = 0,
-  body: any = 'no response body',
-) {
+function logResponse(ms: number, status = 0, body: any = 'no response body') {
   const logs: any[] = [`${LogPrefix.Outgoing}${colorStatus(status)} - ${ms}ms`];
 
   logs.push(...[`-- body:`, body, '\n']);
@@ -74,7 +80,10 @@ const loggerMiddleware = createMiddleware(async (ctx, next) => {
     const type = ctx.req.header('Content-Type') ?? '';
 
     let body;
-    if (type.includes('application/json') && (method === 'POST' || method === 'PATCH')) {
+    if (
+      type.includes('application/json')
+      && (method === 'POST' || method === 'PATCH')
+    ) {
       try {
         body = await ctx.req.json();
       } catch {}
