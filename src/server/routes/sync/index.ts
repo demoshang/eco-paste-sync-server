@@ -1,6 +1,7 @@
 import { Errors } from '@/error';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { randomUUID } from 'node:crypto';
 import { get, omit, shake } from 'radash';
 
 import { getClientName } from './client';
@@ -47,8 +48,12 @@ const sync = new Hono<{
     const clientName = ctx.get('clientName');
     const roomId = ctx.get('roomId');
 
+    const lastEventId = ctx.req.header('Last-Event-ID');
+
     return streamSSE(ctx, async (stream) => {
       sse.joinRoom({ clientId, clientName, roomId, stream });
+
+      stream.writeSSE(sse.getOpenData(roomId, lastEventId));
 
       return new Promise((resolve) => {
         stream.onAbort(() => {

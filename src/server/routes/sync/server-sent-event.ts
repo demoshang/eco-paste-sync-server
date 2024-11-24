@@ -1,5 +1,6 @@
 import type { SSEStreamingApi } from 'hono/streaming';
 
+import { randomUUID } from 'node:crypto';
 import { omit } from 'radash';
 
 interface ClipboardPayload {
@@ -19,6 +20,7 @@ class ServerSentEvent {
     [roomId: RoomId]: {
       roomId: RoomId;
       data: ClipboardPayload;
+      dataId: string;
       clients: {
         clientId: string;
         clientName: string;
@@ -28,6 +30,14 @@ class ServerSentEvent {
   } = {};
 
   private clientMap: { [clientId: string]: RoomId } = {};
+
+  public getOpenData(roomId: string, lastEventId?: string) {
+    if (!lastEventId || this.roomMap[roomId]?.dataId !== lastEventId) {
+      return { id: randomUUID(), data: 'hello' };
+    }
+
+    return { id: lastEventId, data: JSON.stringify(this.roomMap[roomId].data) };
+  }
 
   public getLatestClipboardData(roomId: string): ClipboardPayload | undefined {
     return this.roomMap[roomId]?.data;
@@ -91,7 +101,7 @@ class ServerSentEvent {
 
       const payload = omit(this.roomMap[roomId].data, ['blobs']);
       logger.info('broadcase to ', client.clientName, payload);
-      client.stream.writeSSE({ data: JSON.stringify(payload) });
+      client.stream.writeSSE({ id: this.roomMap[roomId].dataId, data: JSON.stringify(payload) });
       sseLen += 1;
     }
 
@@ -140,6 +150,7 @@ class ServerSentEvent {
       ...data,
       size,
     };
+    this.roomMap[roomId].dataId = randomUUID();
   }
 }
 
