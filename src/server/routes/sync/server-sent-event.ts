@@ -33,6 +33,12 @@ class ServerSentEvent {
     return this.roomMap[roomId]?.data;
   }
 
+  public getClients(roomId: string) {
+    return this.roomMap[roomId]?.clients.map(({ clientId, clientName }) => {
+      return { clientId, clientName };
+    }) ?? [];
+  }
+
   public joinRoom({
     clientId,
     clientName,

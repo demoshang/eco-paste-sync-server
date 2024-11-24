@@ -100,6 +100,10 @@ const sync = new Hono<{
 
     sse.broadcase(clientId, roomId, clipboardData);
     return ctx.json(data);
+  })
+  .get('/clients', async (ctx) => {
+    const data = sse.getClients(ctx.get('roomId'));
+    return ctx.json(data);
   });
 
 export { sync };
