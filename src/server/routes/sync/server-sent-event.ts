@@ -109,7 +109,7 @@ class ServerSentEvent {
     this.roomMap[roomId].clients.push({ clientId, clientName, stream });
 
     stream.onAbort(() => {
-      this.leaveRoom(roomId);
+      this.leaveRoom(clientId);
 
       logger.info(`${clientName || clientId} leave room: ${roomId}`);
     });
