@@ -1,7 +1,6 @@
 import { Errors } from '@/error';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { randomUUID } from 'node:crypto';
 import { get, omit, shake } from 'radash';
 
 import { getClientName } from './client';
@@ -42,38 +41,16 @@ const sync = new Hono<{
 
     await next();
   })
-  // 服务器推送
-  .get('/sse', async (ctx) => {
-    const clientId = ctx.get('clientId');
-    const clientName = ctx.get('clientName');
-    const roomId = ctx.get('roomId');
-
-    const lastEventId = ctx.req.header('Last-Event-ID');
-
-    return streamSSE(ctx, async (stream) => {
-      sse.joinRoom({ clientId, clientName, roomId, stream });
-
-      stream.writeSSE(sse.getOpenData(roomId, lastEventId));
-
-      return new Promise((resolve) => {
-        stream.onAbort(() => {
-          resolve();
-        });
-      });
-    }, async (e) => {
-      console.error(e);
-    });
-  })
   // 返回纯文本结构
   .get('/', async (ctx) => {
-    const data = sse.getLatestClipboardData(ctx.get('roomId'));
+    const data = sse.getLatestClipboardPayload(ctx.get('roomId'));
     return ctx.json(omit(data ?? { blobs: undefined }, ['blobs']));
   })
   // 返回文件
   .get('/file', async (ctx) => {
     const index = Number(ctx.req.query('i') || '0');
 
-    const data = sse.getLatestClipboardData(ctx.get('roomId'));
+    const data = sse.getLatestClipboardPayload(ctx.get('roomId'));
 
     const blob = get<Blob>(data, `blobs[${index}]`);
     if (!blob) {
@@ -106,7 +83,30 @@ const sync = new Hono<{
     sse.broadcase(clientId, roomId, clipboardData);
     return ctx.json(data);
   })
-  .get('/clients', async (ctx) => {
+  // 服务器推送
+  .get('/sse', async (ctx) => {
+    const clientId = ctx.get('clientId');
+    const clientName = ctx.get('clientName');
+    const roomId = ctx.get('roomId');
+
+    const lastEventId = ctx.req.header('Last-Event-ID');
+
+    return streamSSE(ctx, async (stream) => {
+      sse.joinRoom({ clientId, clientName, roomId, stream });
+
+      stream.writeSSE(sse.getClientOpenData(roomId, lastEventId));
+
+      return new Promise((resolve) => {
+        stream.onAbort(() => {
+          resolve();
+        });
+      });
+    }, async (e) => {
+      console.error(e);
+    });
+  })
+  // 获取当前sse连接的客户端
+  .get('/sse/client', async (ctx) => {
     const data = sse.getClients(ctx.get('roomId'));
     return ctx.json(data);
   });

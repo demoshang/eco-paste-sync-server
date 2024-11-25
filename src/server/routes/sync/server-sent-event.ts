@@ -17,36 +17,62 @@ type RoomId = string;
 
 class ServerSentEvent {
   private roomMap: {
-    [roomId: RoomId]: {
-      roomId: RoomId;
-      data: ClipboardPayload;
-      dataId: string;
-      clients: {
-        clientId: string;
-        clientName: string;
-        stream: SSEStreamingApi;
-      }[];
-    };
+    [roomId: RoomId]:
+      | {
+        roomId: RoomId;
+        data?: {
+          id: string;
+          uploadAt: number;
+          payload: ClipboardPayload;
+        };
+        clients: {
+          clientId: string;
+          clientName: string;
+          stream: SSEStreamingApi;
+        }[];
+      }
+      | undefined;
   } = {};
 
   private clientMap: { [clientId: string]: RoomId } = {};
 
-  public getOpenData(roomId: string, lastEventId?: string) {
-    if (!lastEventId || this.roomMap[roomId]?.dataId !== lastEventId) {
+  public getClientOpenData(roomId: string, lastEventId?: string) {
+    // 第一次连接， 或者没有该用户组的记录
+    if (!lastEventId || !this.roomMap[roomId]) {
+      return { id: randomUUID(), data: 'hello' };
+    }
+
+    const data = this.roomMap[roomId].data;
+    // 还没有同步数据
+    if (!data) {
+      return { id: randomUUID(), data: 'hello' };
+    }
+
+    // 重连后上一次的数据已经收到
+    if (data.id === lastEventId) {
+      return { id: randomUUID(), data: 'hello' };
+    }
+
+    // 上次同步的数据超过5秒了，即数据已经失效
+    if (Date.now() > data.uploadAt + 5 * 1000) {
       return { id: randomUUID(), data: 'hello' };
     }
 
     return { id: lastEventId, data: JSON.stringify(this.roomMap[roomId].data) };
   }
 
-  public getLatestClipboardData(roomId: string): ClipboardPayload | undefined {
-    return this.roomMap[roomId]?.data;
+  public getLatestClipboardPayload(
+    roomId: string,
+  ): ClipboardPayload | undefined {
+    return this.roomMap[roomId]?.data?.payload;
   }
 
   public getClients(roomId: string) {
-    return this.roomMap[roomId]?.clients.map(({ clientId, clientName }) => {
-      return { clientId, clientName };
-    }) ?? [];
+    return (
+      this.roomMap[roomId]?.clients.map(({ clientId, clientName }) => {
+        return { clientId, clientName };
+      }) ?? []
+    );
   }
 
   public joinRoom({
@@ -87,10 +113,22 @@ class ServerSentEvent {
     );
   }
 
-  public broadcase(clientId: string, roomId: string, data: ClipboardPayload) {
-    this.setRoomData(roomId, data);
+  public broadcase(
+    clientId: string,
+    roomId: string,
+    payload: ClipboardPayload,
+  ) {
+    this.setRoomData(roomId, payload);
 
-    const { clients } = this.roomMap[roomId];
+    if (!this.roomMap[roomId]) {
+      return;
+    }
+
+    const { clients, data } = this.roomMap[roomId];
+
+    if (!data) {
+      return;
+    }
 
     let sseLen = 0;
     for (const client of clients) {
@@ -99,9 +137,12 @@ class ServerSentEvent {
         continue;
       }
 
-      const payload = omit(this.roomMap[roomId].data, ['blobs']);
+      const payload = omit(data.payload, ['blobs']);
       logger.info('broadcase to ', client.clientName, payload);
-      client.stream.writeSSE({ id: this.roomMap[roomId].dataId, data: JSON.stringify(payload) });
+      client.stream.writeSSE({
+        id: data.id,
+        data: JSON.stringify(payload),
+      });
       sseLen += 1;
     }
 
@@ -138,19 +179,22 @@ class ServerSentEvent {
     let size = 0;
     if (data.blobs?.length) {
       size = data.blobs.reduce((sum, { size }) => {
-        sum += size;
-        return sum;
+        return sum + size;
       }, 0);
+
+      size = Number(
+        (Math.floor((size / 1024 / 1024) * 10000) / 10000).toFixed(4),
+      );
     }
-    size = Number(
-      (Math.floor((size / 1024 / 1024) * 10000) / 10000).toFixed(4),
-    );
 
     this.roomMap[roomId].data = {
-      ...data,
-      size,
+      id: randomUUID(),
+      uploadAt: Date.now(),
+      payload: {
+        ...data,
+        size,
+      },
     };
-    this.roomMap[roomId].dataId = randomUUID();
   }
 }
 
