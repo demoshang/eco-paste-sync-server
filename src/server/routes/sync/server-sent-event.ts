@@ -37,7 +37,7 @@ class ServerSentEvent {
   private clientMap: { [clientId: string]: RoomId } = {};
 
   public getClientOpenData(roomId: string, lastEventId?: string) {
-    // 第一次连接， 或者没有该用户组的记录
+    // 第一次连接或者keep-alive， 或者没有该用户组的记录
     if (!lastEventId || !this.roomMap[roomId]) {
       return { id: randomUUID(), data: 'hello' };
     }
@@ -53,8 +53,8 @@ class ServerSentEvent {
       return { id: randomUUID(), data: 'hello' };
     }
 
-    // 上次同步的数据超过5秒了，即数据已经失效
-    if (Date.now() > data.uploadAt + 5 * 1000) {
+    // 上次同步的数据超过N秒了，即数据已经失效
+    if (Date.now() > data.uploadAt + 10 * 1000) {
       return { id: randomUUID(), data: 'hello' };
     }
 

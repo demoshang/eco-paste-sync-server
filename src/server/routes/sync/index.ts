@@ -1,6 +1,7 @@
 import { Errors } from '@/error';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
+import { randomUUID } from 'node:crypto';
 import { get, omit, shake } from 'radash';
 
 import { getClientName } from './client';
@@ -96,8 +97,14 @@ const sync = new Hono<{
 
       stream.writeSSE(sse.getClientOpenData(roomId, lastEventId));
 
+      // keep alive
+      const timer = setInterval(() => {
+        stream.writeSSE(sse.getClientOpenData(roomId));
+      }, 50 * 1000);
+
       return new Promise((resolve) => {
         stream.onAbort(() => {
+          clearInterval(timer);
           resolve();
         });
       });
